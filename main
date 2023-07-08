@@ -1,0 +1,159 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+# Define the URL of the e-commerce site you want to scrape
+url = "https://www.example.com"
+
+# Load the existing data from the Excel file
+try:
+    df = pd.read_excel("product_data.xlsx")
+    start_index = len(df)
+except FileNotFoundError:
+    df = pd.DataFrame(columns=["Product Name", "Product Description", "SKU Number", "Price", "Availability",
+                               "Variations", "Product Images", "Lifestyle Images", "Product Videos",
+                               "Customer Reviews", "Purchase History", "Clickstream Data", "Search Queries",
+                               "Inventory Levels", "Stock Replenishment Schedules", "Supplier Information",
+                               "Pricing Information"])
+    start_index = 0
+
+# Run the scraping script continuously
+while True:
+    try:
+        # Send a GET request to the URL and retrieve the HTML content
+        response = requests.get(url)
+        content = response.content
+
+        # Parse the HTML content using BeautifulSoup
+        soup = BeautifulSoup(content, "html.parser")
+
+        # Extract the product information
+        product_name = soup.find("h1", class_="product-name").text
+        product_description = soup.find("div", class_="product-description").text
+        sku_number = soup.find("span", class_="sku").text
+        price = soup.find("span", class_="price").text
+        availability = soup.find("span", class_="availability").text
+
+        # Extract the product variations/options
+        variations = []
+        variation_elements = soup.find_all("select", class_="variation-options")
+        for element in variation_elements:
+            options = element.find_all("option")
+            variation = [option.text for option in options]
+            variations.append(variation)
+
+        # Extract the product images
+        product_images = []
+        image_elements = soup.find_all("img", class_="product-image")
+        for element in image_elements:
+            image_url = element["src"]
+            product_images.append(image_url)
+
+        # Extract the lifestyle images
+        lifestyle_images = []
+        lifestyle_elements = soup.find_all("img", class_="lifestyle-image")
+        for element in lifestyle_elements:
+            image_url = element["src"]
+            lifestyle_images.append(image_url)
+
+        # Extract the product videos
+        product_videos = []
+        video_elements = soup.find_all("video", class_="product-video")
+        for element in video_elements:
+            video_url = element["src"]
+            product_videos.append(video_url)
+
+        # Extract the customer reviews and ratings
+        reviews = []
+        review_elements = soup.find_all("div", class_="customer-review")
+        for element in review_elements:
+            review = {
+                "title": element.find("h3").text,
+                "content": element.find("p").text,
+                "rating": element.find("span", class_="rating").text,
+            }
+            reviews.append(review)
+
+        # Extract the purchase history
+        purchase_history = []
+        history_elements = soup.find_all("div", class_="purchase-history")
+        for element in history_elements:
+            purchase = {
+                "customer_name": element.find("span", class_="customer-name").text,
+                "date": element.find("span", class_="purchase-date").text,
+            }
+            purchase_history.append(purchase)
+
+        # Extract the clickstream data
+        clickstream_data = []
+        clickstream_elements = soup.find_all("div", class_="clickstream-data")
+        for element in clickstream_elements:
+            click_data = element.text
+            clickstream_data.append(click_data)
+
+        # Extract the search queries
+        search_queries = []
+        query_elements = soup.find_all("div", class_="search-query")
+        for element in query_elements:
+            query = element.text
+            search_queries.append(query)
+
+        # Extract the inventory levels
+        inventory_levels = soup.find("span", class_="inventory-levels").text
+
+        # Extract the stock replenishment schedules
+        replenishment_schedules = []
+        schedule_elements = soup.find_all("div", class_="replenishment-schedule")
+        for element in schedule_elements:
+            schedule = element.text
+            replenishment_schedules.append(schedule)
+
+        # Extract the supplier information
+        supplier_information = soup.find("div", class_="supplier-information").text
+
+        # Extract the pricing information
+        pricing_information = soup.find("div", class_="pricing-information").text
+
+        # Create a dictionary for the collected information
+        product_data = {
+            "Product Name": product_name,
+            "Product Description": product_description,
+            "SKU Number": sku_number,
+            "Price": price,
+            "Availability": availability,
+            "Variations": variations,
+            "Product Images": product_images,
+            "Lifestyle Images": lifestyle_images,
+            "Product Videos": product_videos,
+            "Customer Reviews": reviews,
+            "Purchase History": purchase_history,
+            "Clickstream Data": clickstream_data,
+            "Search Queries": search_queries,
+            "Inventory Levels": inventory_levels,
+            "Stock Replenishment Schedules": replenishment_schedules,
+            "Supplier Information": supplier_information,
+            "Pricing Information": pricing_information
+        }
+
+        # Append the product data to the DataFrame
+        df = df.append(product_data, ignore_index=True)
+
+        # Save the DataFrame to the Excel file
+        df.to_excel("product_data.xlsx", index=False)
+
+        # Print the progress
+        print("Scraped product:", product_name)
+
+    except Exception as e:
+        print("Error occurred:", str(e))
+
+    # Increment the start index
+    start_index += 1
+
+    # Check if we have scraped 100 products
+    if start_index % 100 == 0:
+        print("Collected data for 100 products. Continuing...")
+
+    # Pause the script for a certain duration before scraping the next product
+    # Adjust the sleep time according to the website's response time and your scraping requirements
+    # time.sleep(1)
